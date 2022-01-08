@@ -177,6 +177,18 @@ class OC_Util {
 		}
 	}
 
+	public static function initDeluacdRootFS($config) {
+		\OC\Files\Filesystem::initMountManager();
+		if (!self::$rootMounted) {
+			\OC\Files\Filesystem::mount('\OC\Files\Storage\Deluacd', [
+				"root" => $config["root"],
+				"socket" => $config["socket"],
+				"key" => $config["key"],
+				"creationMode" => $config["creationMode"],
+			], "/");
+		}
+	}
+
 	/**
 	 * Can be set up
 	 *
@@ -293,12 +305,16 @@ class OC_Util {
 		//check if we are using an object storage
 		$objectStore = \OC::$server->getSystemConfig()->getValue('objectstore', null);
 		$objectStoreMultibucket = \OC::$server->getSystemConfig()->getValue('objectstore_multibucket', null);
+		// or deluacd
+		$deluacd = \OC::$server->getSystemConfig()->getValue('deluacd', null);
 
 		// use the same order as in ObjectHomeMountProvider
 		if (isset($objectStoreMultibucket)) {
 			self::initObjectStoreMultibucketRootFS($objectStoreMultibucket);
 		} elseif (isset($objectStore)) {
 			self::initObjectStoreRootFS($objectStore);
+		} elseif (isset($deluacd)) {
+			self::initDeluacdRootFS($deluacd);
 		} else {
 			self::initLocalStorageRootFS();
 		}

@@ -31,6 +31,7 @@ namespace OCA\Files_External\AppInfo;
 
 use OCA\Files_External\Config\ConfigAdapter;
 use OCA\Files_External\Config\UserPlaceholderHandler;
+use OCA\Files_External\Lib\Auth\SharedKey;
 use OCA\Files_External\Listener\GroupDeletedListener;
 use OCA\Files_External\Listener\UserDeletedListener;
 use OCA\Files_External\Lib\Auth\AmazonS3\AccessKey;
@@ -60,6 +61,7 @@ use OCA\Files_External\Lib\Backend\SFTP_Key;
 use OCA\Files_External\Lib\Backend\SMB;
 use OCA\Files_External\Lib\Backend\SMB_OC;
 use OCA\Files_External\Lib\Backend\Swift;
+use OCA\Files_External\Lib\Backend\Deluacd;
 use OCA\Files_External\Lib\Config\IAuthMechanismProvider;
 use OCA\Files_External\Lib\Config\IBackendProvider;
 use OCA\Files_External\Service\BackendService;
@@ -136,6 +138,7 @@ class Application extends App implements IBackendProvider, IAuthMechanismProvide
 			$container->query(SFTP_Key::class),
 			$container->query(SMB::class),
 			$container->query(SMB_OC::class),
+			$container->query(Deluacd::class),
 		];
 
 		return $backends;
@@ -176,6 +179,9 @@ class Application extends App implements IBackendProvider, IAuthMechanismProvide
 			$container->query(OpenStackV2::class),
 			$container->query(OpenStackV3::class),
 			$container->query(Rackspace::class),
+
+			// AuthMechanism::SCHEME_SHARED_KEY mechanisms
+			$container->query(SharedKey::class),
 
 			// Specialized mechanisms
 			$container->query(AccessKey::class),
