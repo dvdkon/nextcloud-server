@@ -115,7 +115,7 @@ $server->addPlugin(new \OCA\DAV\CalDAV\Schedule\Plugin(\OC::$server->getConfig()
 if ($sendInvitations) {
 	$server->addPlugin(\OC::$server->query(\OCA\DAV\CalDAV\Schedule\IMipPlugin::class));
 }
-$server->addPlugin(new ExceptionLoggerPlugin('caldav', \OC::$server->getLogger()));
+$server->addPlugin(new ExceptionLoggerPlugin('caldav', \OC::$server->get(LoggerInterface::class)));
 
 // And off we go!
 $server->exec();

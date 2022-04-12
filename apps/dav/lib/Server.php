@@ -97,7 +97,7 @@ class Server {
 
 		$this->request = $request;
 		$this->baseUri = $baseUri;
-		$logger = \OC::$server->getLogger();
+		$logger = \OC::$server->get(LoggerInterface::class);
 		$dispatcher = \OC::$server->getEventDispatcher();
 		/** @var IEventDispatcher $newDispatcher */
 		$newDispatcher = \OC::$server->query(IEventDispatcher::class);
@@ -168,7 +168,7 @@ class Server {
 		// calendar plugins
 		if ($this->requestIsForSubtree(['calendars', 'public-calendars', 'system-calendars', 'principals'])) {
 			$this->server->addPlugin(new \OCA\DAV\CalDAV\Plugin());
-			$this->server->addPlugin(new \OCA\DAV\CalDAV\ICSExportPlugin\ICSExportPlugin(\OC::$server->getConfig(), \OC::$server->getLogger()));
+			$this->server->addPlugin(new \OCA\DAV\CalDAV\ICSExportPlugin\ICSExportPlugin(\OC::$server->getConfig(), $logger));
 			$this->server->addPlugin(new \OCA\DAV\CalDAV\Schedule\Plugin(\OC::$server->getConfig()));
 			if (\OC::$server->getConfig()->getAppValue('dav', 'sendInvitations', 'yes') === 'yes') {
 				$this->server->addPlugin(\OC::$server->query(\OCA\DAV\CalDAV\Schedule\IMipPlugin::class));
@@ -195,7 +195,7 @@ class Server {
 			$this->server->addPlugin(new HasPhotoPlugin());
 			$this->server->addPlugin(new ImageExportPlugin(new PhotoCache(
 				\OC::$server->getAppDataDir('dav-photocache'),
-				\OC::$server->getLogger())
+				$logger)
 			));
 		}
 
@@ -237,7 +237,7 @@ class Server {
 		$this->server->addPlugin(new SearchPlugin($lazySearchBackend));
 
 		// wait with registering these until auth is handled and the filesystem is setup
-		$this->server->on('beforeMethod:*', function () use ($root, $lazySearchBackend) {
+		$this->server->on('beforeMethod:*', function () use ($root, $lazySearchBackend, $logger) {
 			// custom properties plugin must be the last one
 			$userSession = \OC::$server->getUserSession();
 			$user = $userSession->getUser();
@@ -306,7 +306,6 @@ class Server {
 						\OC::$server->getShareManager(),
 						$view
 					));
-					$logger = \OC::$server->get(LoggerInterface::class);
 					$this->server->addPlugin(
 						new BulkUploadPlugin($userFolder, $logger)
 					);

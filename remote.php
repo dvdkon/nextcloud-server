@@ -36,6 +36,7 @@ require_once __DIR__ . '/lib/versioncheck.php';
 use OCA\DAV\Connector\Sabre\ExceptionLoggerPlugin;
 use Sabre\DAV\Exception\ServiceUnavailable;
 use Sabre\DAV\Server;
+use Psr\Log\LoggerInterface;
 
 /**
  * Class RemoteException
@@ -57,7 +58,7 @@ function handleException($e) {
 		$server = new Server();
 		if (!($e instanceof RemoteException)) {
 			// we shall not log on RemoteException
-			$server->addPlugin(new ExceptionLoggerPlugin('webdav', \OC::$server->getLogger()));
+			$server->addPlugin(new ExceptionLoggerPlugin('webdav', \OC::$server->get(LoggerInterface::class)));
 		}
 		$server->on('beforeMethod:*', function () use ($e) {
 			if ($e instanceof RemoteException) {
