@@ -109,6 +109,10 @@ class Propagator implements IPropagator {
 					$builder->func()->add('size', $builder->createNamedParameter($sizeDifference)),
 					$builder->createNamedParameter(-1, IQueryBuilder::PARAM_INT)
 				))
+				->set('unencrypted_size', $builder->func()->greatest(
+					$builder->func()->add('unencrypted_size', $builder->createNamedParameter($sizeDifference)),
+					$builder->createNamedParameter(-1, IQueryBuilder::PARAM_INT)
+				))
 				->where($builder->expr()->eq('storage', $builder->createNamedParameter($storageId, IQueryBuilder::PARAM_INT)))
 				->andWhere($builder->expr()->in('path_hash', $hashParams))
 				->andWhere($builder->expr()->gt('size', $builder->expr()->literal(-1, IQueryBuilder::PARAM_INT)));

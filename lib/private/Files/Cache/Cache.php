@@ -428,7 +428,7 @@ class Cache implements ICache {
 	protected function normalizeData(array $data): array {
 		$fields = [
 			'path', 'parent', 'name', 'mimetype', 'size', 'mtime', 'storage_mtime', 'encrypted',
-			'etag', 'permissions', 'checksum', 'storage'];
+			'etag', 'permissions', 'checksum', 'storage', 'unencrypted_size'];
 		$extensionFields = ['metadata_etag', 'creation_time', 'upload_time'];
 
 		$doNotCopyStorageMTime = false;
@@ -873,8 +873,10 @@ class Cache implements ICache {
 			$id = $entry['fileid'];
 
 			$query = $this->getQueryBuilder();
-			$query->selectAlias($query->func()->sum('size'), 'f1')
-				->selectAlias($query->func()->min('size'), 'f2')
+			$query->selectAlias($query->func()->sum('size'), 'size_sum')
+				->selectAlias($query->func()->min('size'), 'size_min')
+				->selectAlias($query->func()->sum('unencrypted_size'), 'unencrypted_sum')
+				->selectAlias($query->func()->min('unencrypted_size'), 'unencrypted_min')
 				->from('filecache')
 				->whereStorageId($this->getNumericStorageId())
 				->whereParent($id);
@@ -884,7 +886,7 @@ class Cache implements ICache {
 			$result->closeCursor();
 
 			if ($row) {
-				[$sum, $min] = array_values($row);
+				['size_sum' => $sum, 'size_min' => $min, 'unencrypted_sum' => $unencryptedSum, 'unencrypted_min' => $unencryptedMin] = $row;
 				$sum = 0 + $sum;
 				$min = 0 + $min;
 				if ($min === -1) {
@@ -892,8 +894,22 @@ class Cache implements ICache {
 				} else {
 					$totalSize = $sum;
 				}
+				if ($unencryptedMin === -1 || $min === -1) {
+					$unencryptedTotal = $unencryptedMin;
+				} else {
+					$unencryptedTotal = $unencryptedSum;
+				}
 				if ($entry['size'] !== $totalSize) {
-					$this->update($id, ['size' => $totalSize]);
+					if ($unencryptedTotal !== null) {
+						$this->update($id, [
+							'size' => $totalSize,
+							'unencrypted_size' => $unencryptedTotal,
+						]);
+					} else {
+						$this->update($id, [
+							'size' => $totalSize
+						]);
+					}
 				}
 			}
 		}
