@@ -82,6 +82,8 @@ interface ISession {
 	 * @since 6.0.0
 	 */
 	public function clear();
+	
+	public function reopen();
 
 	/**
 	 * Close the session and release the lock

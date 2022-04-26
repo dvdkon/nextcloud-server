@@ -97,8 +97,10 @@ class CryptoSessionData implements \ArrayAccess, ISession {
 	 * @param mixed $value
 	 */
 	public function set(string $key, $value) {
+		$this->reopen();
 		$this->sessionValues[$key] = $value;
 		$this->isModified = true;
+		$this->close();
 	}
 
 	/**
@@ -147,6 +149,10 @@ class CryptoSessionData implements \ArrayAccess, ISession {
 		}
 		$this->isModified = true;
 		$this->session->clear();
+	}
+
+	public function reopen() {
+		$this->session->reopen();
 	}
 
 	/**
