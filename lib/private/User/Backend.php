@@ -47,6 +47,8 @@ abstract class Backend implements UserInterface {
 	public const SET_DISPLAYNAME = 1048576;		// 1 << 20
 	public const PROVIDE_AVATAR = 16777216;		// 1 << 24
 	public const COUNT_USERS = 268435456;	// 1 << 28
+	// TODO: Why were  only multiples of four used?
+	public const GET_UNIX_UID_MAPPING = 2;	// 1 << 1
 
 	protected $possibleActions = [
 		self::CREATE_USER => 'createUser',
@@ -57,6 +59,7 @@ abstract class Backend implements UserInterface {
 		self::SET_DISPLAYNAME => 'setDisplayName',
 		self::PROVIDE_AVATAR => 'canChangeAvatar',
 		self::COUNT_USERS => 'countUsers',
+		self::GET_UNIX_UID_MAPPING => 'getUnixUidMapping',
 	];
 
 	/**
@@ -162,5 +165,13 @@ abstract class Backend implements UserInterface {
 	 */
 	public function hasUserListings() {
 		return false;
+	}
+
+	/**
+	 * Get a mapping of NextCloud usernames to UNIX UIDs (for deluacd)
+	 * @return array<string, int>
+	 */
+	public function getUnixUidMapping() {
+		return [];
 	}
 }

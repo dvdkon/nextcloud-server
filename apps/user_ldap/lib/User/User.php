@@ -231,6 +231,13 @@ class User {
 		}
 		unset($attr);
 
+		//UNIX UID (for deluacd)
+		$attr = strtolower($this->connection->ldapUnixUidAttribute);
+		if (isset($ldapEntry[$attr])) {
+			$this->config->setUserValue($this->getUsername(), 'user_ldap', 'unixUid', $ldapEntry[$attr][0]);
+		}
+		unset($attr);
+
 		//Avatar
 		/** @var Connection $connection */
 		$connection = $this->access->getConnection();

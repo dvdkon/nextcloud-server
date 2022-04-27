@@ -175,6 +175,7 @@ class Manager {
 			$this->access->getConnection()->ldapUserDisplayName,
 			$this->access->getConnection()->ldapUserDisplayName2,
 			$this->access->getConnection()->ldapExtStorageHomeAttribute,
+			$this->access->getConnection()->ldapUnixUidAttribute,
 		];
 
 		$homeRule = (string)$this->access->getConnection()->homeFolderNamingRule;

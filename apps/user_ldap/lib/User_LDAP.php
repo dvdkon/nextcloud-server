@@ -48,6 +48,7 @@ use OCP\IConfig;
 use OCP\IUserSession;
 use OCP\Notification\IManager as INotificationManager;
 use Psr\Log\LoggerInterface;
+use function is_numeric;
 
 class User_LDAP extends BackendUtility implements \OCP\IUserBackend, \OCP\UserInterface, IUserLDAP {
 	/** @var \OCP\IConfig */
@@ -289,6 +290,48 @@ class User_LDAP extends BackendUtility implements \OCP\IUserBackend, \OCP\UserIn
 
 		$this->access->connection->writeToCache($cachekey, $ldap_users);
 		return $ldap_users;
+	}
+
+	/**
+	 * Get a mapping of NextCloud usernames to UNIX UIDs (for deluacd)
+	 *
+	 * @return array<string, int>
+	 */
+	public function getUnixUidMapping() {
+		$cacheKey = 'getUnixUidMapping';
+
+		$mapping = $this->access->connection->getFromCache($cacheKey);
+		if (!is_null($mapping)) {
+			return $mapping;
+		}
+
+		$this->logger->debug('getUnixUidMapping: executing LDAP search');
+
+		$uidAttr = strtolower($this->access->connection->ldapUnixUidAttribute);
+		$attrs = ['dn', $uidAttr];
+		$records = $this->access->fetchListOfUsers($this->access->connection->ldapUserFilter, $attrs);
+
+		$mapping = [];
+		foreach($records as $record) {
+			$username = $this->access->dn2username($record['dn'][0]);
+			if($username === false) {
+				$this->logger->debug('getUnixUidMapping: Skipping "' . $record['dn'][0] . '", no appropriate NC user');
+				continue;
+			}
+			if(!isset($record[$uidAttr]) || count($record[$uidAttr]) == 0) {
+				$this->logger->debug('getUnixUidMapping: Skipping "' . $record['dn'][0] . '", no UNIX UID');
+				continue;
+			}
+			$uidstr = $record[$uidAttr][0];
+			if(!is_numeric($uidstr)) {
+				$this->logger->debug('getUnixUidMapping: Skipping "' . $record['dn'][0] . '", UID is not numeric: ' . $uidstr);
+				continue;
+			}
+			$mapping[$username] = intval($uidstr);
+		}
+
+		$this->access->connection->writeToCache($cacheKey, $mapping);
+		return $mapping;
 	}
 
 	/**
@@ -564,6 +607,7 @@ class User_LDAP extends BackendUtility implements \OCP\IUserBackend, \OCP\UserIn
 			| (($this->access->connection->ldapUserAvatarRule !== 'none') ? Backend::PROVIDE_AVATAR : 0)
 			| Backend::COUNT_USERS
 			| (((int)$this->access->connection->turnOnPasswordChange === 1)? Backend::SET_PASSWORD :0)
+			| Backend::GET_UNIX_UID_MAPPING
 			| $this->userPluginManager->getImplementedActions())
 			& $actions);
 	}

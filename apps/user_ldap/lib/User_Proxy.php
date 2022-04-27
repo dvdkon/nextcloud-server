@@ -162,16 +162,26 @@ class User_Proxy extends Proxy implements \OCP\IUserBackend, \OCP\UserInterface,
 	 * @param null|int $offset
 	 * @return string[] an array of all uids
 	 */
-	public function getUsers($search = '', $limit = 10, $offset = 0) {
-		//we do it just as the /OC_User implementation: do not play around with limit and offset but ask all backends
+	public function getusers($search = '', $limit = 10, $offset = 0) {
+		//we do it just as the /oc_user implementation: do not play around with limit and offset but ask all backends
 		$users = [];
 		foreach ($this->backends as $backend) {
-			$backendUsers = $backend->getUsers($search, $limit, $offset);
-			if (is_array($backendUsers)) {
-				$users = array_merge($users, $backendUsers);
+			$backendusers = $backend->getusers($search, $limit, $offset);
+			if (is_array($backendusers)) {
+				$users = array_merge($users, $backendusers);
 			}
 		}
 		return $users;
+	}
+
+
+	public function getUnixUidMapping() {
+		$mapping = [];
+		foreach ($this->backends as $backend) {
+			$backendMapping = $backend->getUnixUidMapping();
+			$mapping = array_merge($mapping, $backendMapping);
+		}
+		return $mapping;
 	}
 
 	/**

@@ -453,6 +453,13 @@ class Database extends ABackend implements
 	}
 
 	/**
+	 * @return array<string, int>
+	 */
+	public function getUnixUidMapping() {
+		return [];
+	}
+
+	/**
 	 * counts the users in the database
 	 *
 	 * @return int|bool

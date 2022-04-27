@@ -181,11 +181,12 @@ class OC_Util {
 		\OC\Files\Filesystem::initMountManager();
 		if (!self::$rootMounted) {
 			\OC\Files\Filesystem::mount('\OC\Files\Storage\Deluacd', [
-				"root" => $config["root"],
-				"socket" => $config["socket"],
-				"key" => $config["key"],
-				"creationMode" => $config["creationMode"],
-			], "/");
+				'root' => $config['root'],
+				'socket' => $config['socket'],
+				'key' => $config['key'],
+				'creationMode' => $config['creationMode'],
+			], '/');
+			self::$rootMounted = true;
 		}
 	}
 
@@ -313,8 +314,8 @@ class OC_Util {
 			self::initObjectStoreMultibucketRootFS($objectStoreMultibucket);
 		} elseif (isset($objectStore)) {
 			self::initObjectStoreRootFS($objectStore);
-		} elseif (isset($deluacd)) {
-			self::initDeluacdRootFS($deluacd);
+		//} elseif (isset($deluacd)) {
+		//	self::initDeluacdRootFS($deluacd);
 		} else {
 			self::initLocalStorageRootFS();
 		}

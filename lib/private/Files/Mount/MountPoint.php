@@ -150,11 +150,10 @@ class MountPoint implements IMountPoint {
 			} catch (\Exception $exception) {
 				$this->storage = null;
 				$this->invalidStorage = true;
+				\OC::$server->getLogger()->logException($exception, ['level' => ILogger::ERROR]);
 				if ($this->mountPoint === '/') {
 					// the root storage could not be initialized, show the user!
 					throw new \Exception('The root storage could not be initialized. Please contact your local administrator.', $exception->getCode(), $exception);
-				} else {
-					\OC::$server->getLogger()->logException($exception, ['level' => ILogger::ERROR]);
 				}
 				return;
 			}

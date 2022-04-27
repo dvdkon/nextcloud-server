@@ -61,6 +61,7 @@ use Psr\Log\LoggerInterface;
  * @property string ldapQuotaDefault
  * @property string ldapEmailAttribute
  * @property string ldapExtStorageHomeAttribute
+ * @property string ldapUnixUidAttribute
  * @property string homeFolderNamingRule
  * @property bool|string ldapNestedGroups
  * @property string[] ldapBaseGroups

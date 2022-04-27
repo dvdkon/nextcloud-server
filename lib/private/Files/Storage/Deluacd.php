@@ -1,6 +1,6 @@
 <?php
 /**
- * @copyright Copyright (c) 2021, David Koňařík (dvdkon@konarici.cz)
+ * @copyright Copyright (c) 2022, David Koňařík (dvdkon@konarici.cz)
  *
  * @license GNU AGPL version 3 or any later version
  *
@@ -21,6 +21,7 @@
 namespace OC\Files\Storage;
 
 use Icewind\Streams\IteratorDirectory;
+use OCP\IUserBackend;
 use OCP\Files\EmptyFileNameException;
 use OCP\Files\FileNameTooLongException;
 use OCP\Files\ForbiddenException;
@@ -54,6 +55,7 @@ class Deluacd extends Common {
 	const O_RDONLY = 0;
 	const O_WRONLY = 1;
 	const O_RDWR = 2;
+	const O_CREAT = 64;
 	const O_APPEND = 1024;
 	const O_EXCL = 128;
 	const O_TRUNC = 512;
@@ -83,22 +85,52 @@ class Deluacd extends Common {
 		if(empty($params['key'])) {
 			throw new StorageBadConfigException('Secret key required');
 		}
-		if(empty($params['uid'])) {
-			throw new StorageBadConfigException('Target UID required');
-		}
-		if(!preg_match('/^[0-9]+$/', $params['uid'])) {
-			throw new StorageBadConfigException('Target UID must be an integer');
+
+		// User->UID, unlike $this->uidMapping
+		$userUidMapping = $params['uidMapping'] ?? null;
+		if($userUidMapping === null) {
+			$userBackends = \OC::$server->getUserManager()->getBackends();
+			$userUidMapping = [];
+			foreach($userBackends as $backend) {
+				if($backend->implementsActions(\OC\User\Backend::GET_UNIX_UID_MAPPING)) {
+					$userUidMapping = array_merge(
+						$userUidMapping, $backend->getUnixUidMapping());
+				}
+			}
 		}
 
-		$this->root = realpath($params['root']);
-		if($this->root === false) {
-			throw new StorageBadConfigException('Target root path does not exist: ' . $params['root']);
+		$this->uidMapping = [];
+		foreach($userUidMapping as $username => $uid) {
+			$this->uidMapping[$uid] = $username;
+		}
+
+		if(!empty($params['uid'])) {
+			if(!preg_match('/^[0-9]+$/', $params['uid'])) {
+				throw new StorageBadConfigException('Target UID must be an integer');
+			}
+			$this->uid = intval($params['uid']);
+		} else {
+			if(isset($params['username'])) {
+				$username = $params['username'];
+			} else {
+				$username = \OC_User::getUser();
+			}
+			if(!array_key_exists($username, $userUidMapping)) {
+				throw new StorageBadConfigException('Missing UID for current user: ' . $username);
+			}
+			$this->uid = $userUidMapping[$username];
+			if(!is_int($this->uid)) {
+				throw new StorageBadConfigException('Implicit target UID not an int: ' . $this->uid);
+			}
+		}
+
+		$this->root = $params['root'];
+		if(strlen($this->root) === 0 || $this->root[0] !== '/') {
+			throw new StorageBadConfigException('Target root path is not absolute ' . $params['root']);
 		}
 		$this->socketPath = $params['socket'];
 		$this->key = $params['key'];
-		$this->uid = intval($params['uid']);
 		$this->creationMode = octdec($params['creationMode'] ?? '755');
-		$this->uidMapping = $params['uidMapping'] ?? [];
 		$this->statCache = [];
 	}
 
@@ -305,11 +337,10 @@ class Deluacd extends Common {
 	}
 
 	public function getId() {
-		return 'deluacd::{$this->uid}::{$this->root}';
+		return "deluacd::{$this->uid}::{$this->root}";
 	}
 
 	public function mkdir($path) {
-		//trigger_error('Deluacd::mkdir() path=' . $path, E_USER_WARNING);
 		return $this->mkdirInternal($this->translatePath($path), $this->creationMode) === true;
 	}
 
@@ -319,7 +350,6 @@ class Deluacd extends Common {
 
 	public function opendir($path) {
 		$entries = $this->scandirInternal($this->translatePath($path), false);
-		//trigger_error('Deluacd::opendir() path=' . $path, E_USER_WARNING);
 		if($entries === false) {
 			return false;
 		}
@@ -359,21 +389,18 @@ class Deluacd extends Common {
 		}
 		$res = $this->accessInternal(
 			$this->translatePath($path), self::ACCESS_W_OK);
-		//trigger_error('Deluacd::isCreatable() path=' . $path . ' -> ' . $res, E_USER_WARNING);
 		return $res === true;
 	}
 
 	public function isReadable($path) {
 		$res = $this->accessInternal(
 			$this->translatePath($path), self::ACCESS_R_OK);
-		//trigger_error('Deluacd::isReadable() path=' . $path . ' -> ' . $res, E_USER_WARNING);
 		return $res === true;
 	}
 
 	public function isUpdatable($path) {
 		$res = $this->accessInternal(
 			$this->translatePath($path), self::ACCESS_W_OK);
-		//trigger_error('Deluacd::isUpdatable() path=' . $path . ' -> ' . $res, E_USER_WARNING);
 		return $res === true;
 	}
 
@@ -383,7 +410,6 @@ class Deluacd extends Common {
 		}
 		$res = $this->accessInternal(
 			$this->translatePath($path), self::ACCESS_W_OK);
-		//trigger_error('Deluacd::isDeletable() path=' . $path . ' -> ' . $res, E_USER_WARNING);
 		return $res === true;
 	}
 
@@ -394,7 +420,6 @@ class Deluacd extends Common {
 	public function file_exists($path) {
 		$res = $this->accessInternal(
 			$this->translatePath($path), self::ACCESS_F_OK);
-		//trigger_error('Deluacd::file_exists() path=' . $path . ' -> ' . $res, E_USER_WARNING);
 		return $res === true;
 	}
 
@@ -409,7 +434,6 @@ class Deluacd extends Common {
 	}
 
 	public function fopen($path, $mode) {
-		//trigger_error('Deluacd::fopen() path=' . $path . ' mode=' . $mode, E_USER_WARNING);
 		$mode = str_replace('t', '', str_replace('b', '', $mode));
 		switch($mode) {
 			case 'r': $flags = self::O_RDONLY; break;
@@ -490,7 +514,6 @@ class Deluacd extends Common {
 	}
 
 	public function getOwner($path) {
-		//trigger_error('Deluacd::getOwner() path=' . $path, E_USER_WARNING);
 		$stat = $this->stat($path);
 		if($stat === false) {
 			return false;
@@ -498,8 +521,8 @@ class Deluacd extends Common {
 		if(array_key_exists($stat['uid'], $this->uidMapping)) {
 			return $this->uidMapping[$stat['uid']];
 		} else {
-			//return null;
-			return \OC_User::getUser();
+			return null;
+			//return \OC_User::getUser();
 		}
 	}
 }
